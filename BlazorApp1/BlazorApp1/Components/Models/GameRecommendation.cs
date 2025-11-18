@@ -1,4 +1,6 @@
-﻿namespace BlazorApp1.Models
+﻿using BlazorApp1.Models;
+
+namespace BlazorApp1.Components.Models
 {
     public class GameRecommendation
     {
