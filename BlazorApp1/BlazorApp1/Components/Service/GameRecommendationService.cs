@@ -1,6 +1,6 @@
 ﻿using BlazorApp1.Components.Models;
 
-namespace BlazorApp1.Models
+namespace BlazorApp1.Components.Service
 {
     public class GameRecommendationService
     {
@@ -47,7 +47,7 @@ namespace BlazorApp1.Models
                 var similarityScore = (double)intersection / union;
 
                 // Weight by rating (optional boost)
-                var adjustedScore = similarityScore * (1 + (candidate.Rating / 100));
+                var adjustedScore = similarityScore * (1 + candidate.Rating / 100);
 
                 recommendations.Add(new GameRecommendation
                 {
