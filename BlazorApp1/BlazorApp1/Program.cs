@@ -1,5 +1,5 @@
 using BlazorApp1.Components.Models;
-using BlazorApp1.Models;
+using BlazorApp1.Components.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 

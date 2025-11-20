@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
+using BlazorApp1.Components.Models;
 using Microsoft.Extensions.Options;
 
-namespace BlazorApp1.Components.Models
+namespace BlazorApp1.Components.Service
 {
     public class RawgApiService
     {
