@@ -1,0 +1,85 @@
+﻿.home-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.hero {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+    .hero h1 {
+        font-size: 48px;
+        margin: 0 0 16px 0;
+        color: #333;
+    }
+
+    .hero p {
+        font-size: 20px;
+        color: #666;
+        margin: 0;
+    }
+
+.search-section {
+    margin-bottom: 60px;
+}
+
+.selected-game-section {
+    margin-bottom: 60px;
+}
+
+    .selected-game-section h2 {
+        font-size: 28px;
+        margin-bottom: 24px;
+        color: #333;
+    }
+
+.selected-game {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.loading {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.spinner {
+    font-size: 48px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading p {
+    font-size: 18px;
+    color: #666;
+}
+
+.recommendations-section,
+.popular-section {
+    margin-bottom: 60px;
+}
+
+    .recommendations-section h2,
+    .popular-section h2 {
+        font-size: 32px;
+        margin-bottom: 32px;
+        color: #333;
+    }
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
