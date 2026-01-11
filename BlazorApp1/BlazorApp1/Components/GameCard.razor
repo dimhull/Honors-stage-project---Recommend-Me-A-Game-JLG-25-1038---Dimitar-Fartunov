@@ -1,0 +1,70 @@
+﻿@using BlazorApp1.Components.Models
+
+<div class="game-card" @onclick="OnCardClick">
+    <div class="game-image">
+        @if (!string.IsNullOrEmpty(Game.BackgroundImage))
+        {
+            <img src="@Game.BackgroundImage" alt="@Game.Name" />
+        }
+        else
+        {
+            <div class="no-image">No Image</div>
+        }
+    </div>
+
+    <div class="game-info">
+        <h3 class="game-title">@Game.Name</h3>
+
+        <div class="game-rating">
+            <span class="star">⭐</span>
+            <span>@Game.Rating.ToString("F2")</span>
+        </div>
+
+        @if (Game.Released.HasValue)
+        {
+            <div class="game-released">
+                Released: @Game.Released.Value.ToString("MMM dd, yyyy")
+            </div>
+        }
+
+        <div class="game-tags">
+            @foreach (var tag in Game.Tags.Take(4))
+            {
+                <span class="tag">@tag.Name</span>
+            }
+            @if (Game.Tags.Count > 4)
+            {
+                <span class="tag more">+@(Game.Tags.Count - 4) more</span>
+            }
+        </div>
+
+        @if (ShowSimilarityScore && SimilarityScore.HasValue)
+        {
+            <div class="similarity-score">
+                Match: @((SimilarityScore.Value * 100).ToString("F0"))%
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Game Game { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<Game> OnClick { get; set; }
+
+    [Parameter]
+    public bool ShowSimilarityScore { get; set; } = false;
+
+    [Parameter]
+    public double? SimilarityScore { get; set; }
+
+    private async Task OnCardClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Game);
+        }
+    }
+}

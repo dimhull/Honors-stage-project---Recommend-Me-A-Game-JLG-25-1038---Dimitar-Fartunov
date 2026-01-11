@@ -1,7 +1,102 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@using BlazorApp1.Components.Models
+@using BlazorApp1.Components.Service
+@inject RawgApiService ApiService
+@inject GameRecommendationService RecommendationService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Game Recommender</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="home-container">
+    <header class="hero">
+        <h1>🎮 Game Recommender</h1>
+        <p>Find your next favorite game based on what you love</p>
+    </header>
 
-Welcome to your new app.
+    <div class="search-section">
+        <SearchBar OnGameSelect="HandleGameSelected" />
+    </div>
+
+    @if (selectedGame != null)
+    {
+        <section class="selected-game-section">
+            <h2>Selected Game</h2>
+            <div class="selected-game">
+                <GameCard Game="selectedGame" />
+            </div>
+        </section>
+    }
+
+    @if (isLoadingRecommendations)
+    {
+        <div class="loading">
+            <div class="spinner">🔄</div>
+            <p>Finding similar games...</p>
+        </div>
+    }
+
+    @if (recommendations.Any())
+    {
+        <section class="recommendations-section">
+            <h2>Recommended Games</h2>
+            <div class="games-grid">
+                @foreach (var rec in recommendations)
+                {
+                    <GameCard Game="rec.Game"
+                              ShowSimilarityScore="true"
+                              SimilarityScore="rec.SimilarityScore"
+                              OnClick="HandleGameSelected" />
+                }
+            </div>
+        </section>
+    }
+
+    @if (popularGames.Any() && !recommendations.Any() && selectedGame == null)
+    {
+        <section class="popular-section">
+            <h2>Popular Games</h2>
+            <div class="games-grid">
+                @foreach (var game in popularGames)
+                {
+                    <GameCard Game="game" OnClick="HandleGameSelected" />
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private Game? selectedGame;
+    private List<GameRecommendation> recommendations = new();
+    private List<Game> popularGames = new();
+    private bool isLoadingRecommendations = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load popular games for the homepage
+        popularGames = await ApiService.GetPopularGamesAsync(12);
+    }
+
+    private async Task HandleGameSelected(Game game)
+    {
+        selectedGame = game;
+        recommendations.Clear();
+        isLoadingRecommendations = true;
+
+        try
+        {
+            // Get full game details to ensure we have all tags
+            var fullGame = await ApiService.GetGameByIdAsync(game.Id);
+
+            if (fullGame != null)
+            {
+                selectedGame = fullGame;
+                recommendations = await RecommendationService.GetRecommendationsAsync(fullGame, 12);
+            }
+        }
+        finally
+        {
+            isLoadingRecommendations = false;
+        }
+    }
+}

@@ -14,7 +14,7 @@ namespace BlazorApp1.Components.Service
         {
             _httpClient = httpClient;
             _settings = settings.Value;
-            _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
+            // DON'T set BaseAddress - we'll use full URLs
 
             _jsonOptions = new JsonSerializerOptions
             {
@@ -22,17 +22,25 @@ namespace BlazorApp1.Components.Service
             };
         }
 
-        // Search for games by name
         public async Task<List<Game>> SearchGamesAsync(string query, int pageSize = 10)
         {
             try
             {
-                var url = $"/games?key={_settings.ApiKey}&search={Uri.EscapeDataString(query)}&page_size={pageSize}";
+                // Use FULL URL with /api/ in the path
+                var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&search={Uri.EscapeDataString(query)}&page_size={pageSize}";
+
+                Console.WriteLine($"Calling: {url}");
+
                 var response = await _httpClient.GetAsync(url);
+                var content = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine($"Status: {response.StatusCode}");
+
                 response.EnsureSuccessStatusCode();
 
-                var content = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<RawgApiResponse<Game>>(content, _jsonOptions);
+
+                Console.WriteLine($"Games found: {result?.Results?.Count ?? 0}");
 
                 return result?.Results ?? new List<Game>();
             }
@@ -43,12 +51,14 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        // Get a specific game by ID with full details
         public async Task<Game?> GetGameByIdAsync(int gameId)
         {
             try
             {
-                var url = $"/games/{gameId}?key={_settings.ApiKey}";
+                var url = $"https://api.rawg.io/api/games/{gameId}?key={_settings.ApiKey}";
+
+                Console.WriteLine($"Calling: {url}");
+
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
@@ -64,14 +74,14 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        // Get games by multiple tag IDs
         public async Task<List<Game>> GetGamesByTagsAsync(List<int> tagIds, int pageSize = 20)
         {
             try
             {
-                // RAWG accepts comma-separated tag IDs
                 var tagsParam = string.Join(",", tagIds);
-                var url = $"/games?key={_settings.ApiKey}&tags={tagsParam}&page_size={pageSize}";
+                var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&tags={tagsParam}&page_size={pageSize}";
+
+                Console.WriteLine($"Calling: {url}");
 
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
@@ -88,17 +98,24 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        // Get popular/trending games for homepage
         public async Task<List<Game>> GetPopularGamesAsync(int pageSize = 12)
         {
             try
             {
-                var url = $"/games?key={_settings.ApiKey}&ordering=-rating&page_size={pageSize}";
+                var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&ordering=-rating&page_size={pageSize}";
+
+                Console.WriteLine($"Calling: {url}");
+
                 var response = await _httpClient.GetAsync(url);
+                var content = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine($"Status: {response.StatusCode}");
+
                 response.EnsureSuccessStatusCode();
 
-                var content = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<RawgApiResponse<Game>>(content, _jsonOptions);
+
+                Console.WriteLine($"Popular games found: {result?.Results?.Count ?? 0}");
 
                 return result?.Results ?? new List<Game>();
             }

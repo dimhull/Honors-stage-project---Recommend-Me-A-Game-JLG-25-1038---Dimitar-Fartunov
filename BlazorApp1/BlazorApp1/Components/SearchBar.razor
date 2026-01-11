@@ -1,0 +1,115 @@
+﻿@rendermode InteractiveServer
+
+@using BlazorApp1.Components.Service
+@using BlazorApp1.Components.Models
+
+<div class="search-container">
+    <div class="search-box">
+        <input type="text"
+               class="search-input"
+               placeholder="Search for a game (e.g., The Witcher 3)..."
+               @bind="searchQuery"
+               @bind:event="oninput"
+               @onkeyup="OnSearchInput" />
+
+        @if (isSearching)
+        {
+            <div class="search-spinner">🔄</div>
+        }
+    </div>
+
+    @if (searchResults.Any())
+    {
+        <div class="search-results">
+            @foreach (var game in searchResults)
+            {
+                <div class="search-result-item" @onclick="() => OnGameSelected(game)">
+                    <img src="@game.BackgroundImage" alt="@game.Name" class="result-thumb" />
+                    <div class="result-info">
+                        <div class="result-name">@game.Name</div>
+                        <div class="result-meta">
+                            ⭐ @game.Rating.ToString("F1")
+                            @if (game.Released.HasValue)
+                            {
+                                <span>• @game.Released.Value.Year</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(searchQuery) && !isSearching && !searchResults.Any())
+    {
+        <div class="no-results">
+            No games found for "@searchQuery"
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<Game> OnGameSelect { get; set; }
+
+    private string searchQuery = "";
+    private List<Game> searchResults = new();
+    private bool isSearching = false;
+    private System.Threading.Timer? debounceTimer;
+
+    [Inject]
+    private Service.RawgApiService ApiService { get; set; } = null!;
+
+    private void OnSearchInput(KeyboardEventArgs e)
+    {
+        // Reset the debounce timer
+        debounceTimer?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            searchResults.Clear();
+            return;
+        }
+
+        // Wait 500ms after user stops typing before searching
+        debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await PerformSearch();
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+            return;
+
+        isSearching = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            searchResults = await ApiService.SearchGamesAsync(searchQuery, 8);
+        }
+        finally
+        {
+            isSearching = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnGameSelected(Game game)
+    {
+        searchQuery = "";
+        searchResults.Clear();
+
+        if (OnGameSelect.HasDelegate)
+        {
+            await OnGameSelect.InvokeAsync(game);
+        }
+    }
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}
