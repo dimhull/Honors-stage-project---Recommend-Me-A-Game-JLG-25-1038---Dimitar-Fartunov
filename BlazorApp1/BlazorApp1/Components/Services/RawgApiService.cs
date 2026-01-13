@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using BlazorApp1.Components.Models;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
 
 namespace BlazorApp1.Components.Service
@@ -74,12 +75,13 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        public async Task<List<Game>> GetGamesByTagsAsync(List<int> tagIds, int pageSize = 20)
+        public async Task<List<Game>> GetGamesByTagsAsync(List<int> tagIds, int pageSize = 40, int page = 1)
         {
             try
             {
-                var tagsParam = string.Join(",", tagIds);
-                var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&tags={tagsParam}&page_size={pageSize}";
+                var tags = string.Join(",", tagIds);
+                // Add &page= and &page_size= to your API URL
+                var url = $"https://api.rawg.io/api/games?tags={tags}&page_size={pageSize}&page={page}&key={_settings.ApiKey}";
 
                 Console.WriteLine($"Calling: {url}");
 

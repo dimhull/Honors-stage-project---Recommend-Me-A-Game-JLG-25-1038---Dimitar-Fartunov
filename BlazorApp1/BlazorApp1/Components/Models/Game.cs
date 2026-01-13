@@ -19,5 +19,6 @@ namespace BlazorApp1.Components.Models
 
         [JsonPropertyName("platforms")]
         public List<PlatformInfo> Platforms { get; set; } = new();
+        public int AddedCount { get; set; }
     }
 }
