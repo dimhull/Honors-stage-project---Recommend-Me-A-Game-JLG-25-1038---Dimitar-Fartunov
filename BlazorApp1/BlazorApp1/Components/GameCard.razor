@@ -62,9 +62,6 @@
 
     private async Task OnCardClick()
     {
-        if (OnClick.HasDelegate)
-        {
-            await OnClick.InvokeAsync(Game);
-        }
+        await OnClick.InvokeAsync(Game);
     }
 }
