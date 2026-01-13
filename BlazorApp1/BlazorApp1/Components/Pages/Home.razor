@@ -9,7 +9,7 @@
 
 <div class="home-container">
     <header class="hero">
-        <h1>🎮 Game Recommender</h1>
+        <h1>Game Recommender</h1>
         <p>Find your next favorite game based on what you love</p>
     </header>
 
@@ -19,12 +19,17 @@
 
     @if (selectedGame != null)
     {
-        <section class="selected-game-section">
-            <h2>Selected Game</h2>
-            <div class="selected-game">
-                <GameCard Game="selectedGame" />
-            </div>
-        </section>
+
+            @if (selectedGame != null)
+            {
+                <section class="selected-game-section">
+                    <h2>Selected Game</h2>
+                    <button @onclick="GoBackHome">← Back to Home</button>
+                    <div class="selected-game">
+                        <GameCard Game="selectedGame" />
+                    </div>
+                </section>
+            }
     }
 
     @if (isLoadingRecommendations)
@@ -75,6 +80,11 @@
     {
         // Load popular games for the homepage
         popularGames = await ApiService.GetPopularGamesAsync(12);
+    }
+    private void GoBackHome()
+    {
+        selectedGame = null;
+        recommendations.Clear();
     }
 
     private async Task HandleGameSelected(Game game)
