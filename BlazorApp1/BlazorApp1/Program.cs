@@ -2,7 +2,10 @@ using BlazorApp1.Components;
 using BlazorApp1.Components.Models;
 using BlazorApp1.Components.Service;
 
+
 var builder = WebApplication.CreateBuilder(args);
+//Memory Cache
+builder.Services.AddMemoryCache();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
