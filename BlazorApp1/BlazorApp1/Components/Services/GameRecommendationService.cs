@@ -42,36 +42,55 @@ public class GameRecommendationService
 
     private List<GameRecommendation> ProcessRecommendations(Game source, List<Game> candidates, int max)
     {
+        Console.WriteLine($"\n=== PROCESSING RECOMMENDATIONS FOR: {source.Name} ===");
+        Console.WriteLine($"Source game has {source.Tags.Count} tags");
+        Console.WriteLine($"Processing {candidates.Count} candidate games...\n");
+
         var recs = new List<GameRecommendation>();
 
         foreach (var cand in candidates)
         {
             if (cand.Id == source.Id) continue;
+            if (cand.Tags == null || !cand.Tags.Any()) continue;
 
-            // --- THE SCORING ALGORITHM ---
+            var matchingTags = cand.Tags
+                .Where(t => source.Tags.Any(st => st.Id == t.Id))
+                .ToList();
 
-            // A. Tag Similarity (Jaccard)
-            var matchingTags = cand.Tags.IntersectBy(source.Tags.Select(t => t.Id), t => t.Id).ToList();
-            double similarity = (double)matchingTags.Count / (source.Tags.Count + cand.Tags.Count - matchingTags.Count);
+            // Require at least 4 matching tags
+            if (matchingTags.Count < 4) continue;
 
-            // B. Popularity Penalty
-            // Log10 of AddedCount smooths out the difference between 100k players and 1k players
-            // We divide by this so "Mega-hits" have their score lowered slightly
-            double popularityFactor = Math.Log10(cand.AddedCount + 2);
+            // Simple overlap score (what % of source tags match)
+            double overlapScore = (double)matchingTags.Count / source.Tags.Count;
 
-            // C. Final Weighted Score
-            // We multiply by rating to ensure the hidden gems are actually GOOD games
-            double finalScore = (similarity * (cand.Rating / 100.0)) / popularityFactor;
+            // Jaccard similarity
+            int intersection = matchingTags.Count;
+            int union = source.Tags.Count + cand.Tags.Count - intersection;
+            double jaccardScore = (double)intersection / union;
+
+            // Combine: 60% overlap + 40% Jaccard
+            double similarity = (overlapScore * 0.6) + (jaccardScore * 0.4);
+
+            // Very light rating boost (max 10%) to prefer quality games
+            double ratingBoost = 1 + ((cand.Rating - 3.0) / 50.0);
+
+            double finalScore = similarity * ratingBoost;
 
             recs.Add(new GameRecommendation
             {
                 Game = cand,
                 SimilarityScore = finalScore,
                 MatchingTags = matchingTags,
-                MatchReason = matchingTags.Count > 3 ? "Highly similar gameplay" : "Similar themes"
+                MatchReason = $"{matchingTags.Count}/{source.Tags.Count} tags match"
             });
         }
 
-        return recs.OrderByDescending(r => r.SimilarityScore).Take(max).ToList();
+        Console.WriteLine($"\n✓ Found {recs.Count} qualifying games (4+ matching tags)");
+
+        return recs
+            .OrderByDescending(r => r.MatchingTags.Count)  // Primary: Most matching tags
+            .ThenByDescending(r => r.SimilarityScore)      // Secondary: Similarity score
+            .Take(max)
+            .ToList();
     }
 }
