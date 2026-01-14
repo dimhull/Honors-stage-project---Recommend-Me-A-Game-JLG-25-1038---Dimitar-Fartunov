@@ -95,13 +95,18 @@
 
         try
         {
-            // Get full game details to ensure we have all tags
             var fullGame = await ApiService.GetGameByIdAsync(game.Id);
 
             if (fullGame != null)
             {
+                Console.WriteLine($"Loaded game: {fullGame.Name}");
+                Console.WriteLine($"Tags count: {fullGame.Tags?.Count ?? 0}");
+                Console.WriteLine($"First 5 tags: {string.Join(", ", fullGame.Tags?.Take(5).Select(t => t.Name) ?? new List<string>())}");
+
                 selectedGame = fullGame;
                 recommendations = await RecommendationService.GetRecommendationsAsync(fullGame, 12);
+
+                Console.WriteLine($"Got {recommendations.Count} recommendations");
             }
         }
         finally
