@@ -71,6 +71,8 @@
 </div>
 
 @code {
+
+
     private Game? selectedGame;
     private List<GameRecommendation> recommendations = new();
     private List<Game> popularGames = new();
@@ -78,8 +80,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load popular games for the homepage
-        popularGames = await ApiService.GetPopularGamesAsync(12);
+        var allPopular = await ApiService.GetPopularGamesAsync(20);
+        popularGames = ContentFilter.FilterNsfw(allPopular).Take(20).ToList();
+
+        Console.WriteLine($"Popular games (filtered): {popularGames.Count}");
     }
     private void GoBackHome()
     {
