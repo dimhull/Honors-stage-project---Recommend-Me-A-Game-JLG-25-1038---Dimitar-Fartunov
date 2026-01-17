@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using BlazorApp1.Components.Models;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
 
 namespace BlazorApp1.Components.Service
@@ -15,35 +14,22 @@ namespace BlazorApp1.Components.Service
         {
             _httpClient = httpClient;
             _settings = settings.Value;
-            // DON'T set BaseAddress - we'll use full URLs
-
-            _jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
+            _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
 
         public async Task<List<Game>> SearchGamesAsync(string query, int pageSize = 10)
         {
             try
             {
-                // Use FULL URL with /api/ in the path
                 var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&search={Uri.EscapeDataString(query)}&page_size={pageSize}";
-
-                Console.WriteLine($"Calling: {url}");
-
                 var response = await _httpClient.GetAsync(url);
-                var content = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine($"Status: {response.StatusCode}");
-
                 response.EnsureSuccessStatusCode();
 
+                var content = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<RawgApiResponse<Game>>(content, _jsonOptions);
 
-                Console.WriteLine($"Games found: {result?.Results?.Count ?? 0}");
-
-                return result?.Results ?? new List<Game>();
+                // Filter out NSFW and clean tags to English only
+                return ContentFilter.FilterAndClean(result?.Results ?? new List<Game>());
             }
             catch (Exception ex)
             {
@@ -57,14 +43,18 @@ namespace BlazorApp1.Components.Service
             try
             {
                 var url = $"https://api.rawg.io/api/games/{gameId}?key={_settings.ApiKey}";
-
-                Console.WriteLine($"Calling: {url}");
-
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
                 var game = JsonSerializer.Deserialize<Game>(content, _jsonOptions);
+
+                // Clean tags for the single game and check NSFW status
+                if (game != null)
+                {
+                    if (ContentFilter.IsNsfw(game)) return null;
+                    ContentFilter.CleanSingleGameTags(game); // Ensure English only
+                }
 
                 return game;
             }
@@ -80,18 +70,14 @@ namespace BlazorApp1.Components.Service
             try
             {
                 var tags = string.Join(",", tagIds);
-                // Add &page= and &page_size= to your API URL
                 var url = $"https://api.rawg.io/api/games?tags={tags}&page_size={pageSize}&page={page}&key={_settings.ApiKey}";
-
-                Console.WriteLine($"Calling: {url}");
-
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<RawgApiResponse<Game>>(content, _jsonOptions);
 
-                return result?.Results ?? new List<Game>();
+                return ContentFilter.FilterAndClean(result?.Results ?? new List<Game>());
             }
             catch (Exception ex)
             {
@@ -104,22 +90,17 @@ namespace BlazorApp1.Components.Service
         {
             try
             {
-                var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&ordering=-rating&page_size={pageSize}";
+                var end = DateTime.Now.ToString("yyyy-MM-dd");
+                var start = DateTime.Now.AddYears(-1).ToString("yyyy-MM-dd");
 
-                Console.WriteLine($"Calling: {url}");
-
+                var url = $"https://api.rawg.io/api/games?key={_settings.ApiKey}&ordering=-added&dates={start},{end}&page_size={pageSize}";
                 var response = await _httpClient.GetAsync(url);
-                var content = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine($"Status: {response.StatusCode}");
-
                 response.EnsureSuccessStatusCode();
 
+                var content = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<RawgApiResponse<Game>>(content, _jsonOptions);
 
-                Console.WriteLine($"Popular games found: {result?.Results?.Count ?? 0}");
-
-                return result?.Results ?? new List<Game>();
+                return ContentFilter.FilterAndClean(result?.Results ?? new List<Game>());
             }
             catch (Exception ex)
             {

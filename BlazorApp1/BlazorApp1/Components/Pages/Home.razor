@@ -80,11 +80,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var allPopular = await ApiService.GetPopularGamesAsync(20);
-        popularGames = ContentFilter.FilterNsfw(allPopular).Take(20).ToList();
+        popularGames = await ApiService.GetPopularGamesAsync(20);
 
-        Console.WriteLine($"Popular games (filtered): {popularGames.Count}");
+        Console.WriteLine($"Popular games (filtered & English tags): {popularGames.Count}");
     }
+
     private void GoBackHome()
     {
         selectedGame = null;
