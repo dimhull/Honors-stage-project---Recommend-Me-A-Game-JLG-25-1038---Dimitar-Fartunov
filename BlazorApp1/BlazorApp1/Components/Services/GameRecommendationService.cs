@@ -98,7 +98,7 @@ public class GameRecommendationService
         return uniqueCandidates;
     }
 
-    private List<GameRecommendation> ProcessRecommendations(Game source, List<Game> candidates, int max, int minMatchingTags)
+    public List<GameRecommendation> ProcessRecommendations(Game source, List<Game> candidates, int max, int minMatchingTags)
     {
         var recs = new List<GameRecommendation>();
 

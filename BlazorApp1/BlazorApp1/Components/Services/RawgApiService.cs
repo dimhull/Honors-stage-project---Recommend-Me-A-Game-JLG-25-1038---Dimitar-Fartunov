@@ -38,7 +38,7 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        public async Task<Game?> GetGameByIdAsync(int gameId)
+        public virtual async Task<Game?> GetGameByIdAsync(int gameId)
         {
             try
             {
@@ -65,7 +65,7 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        public async Task<List<Game>> GetGamesByTagsAsync(List<int> tagIds, int pageSize = 40, int page = 1)
+        public virtual async Task<List<Game>> GetGamesByTagsAsync(List<int> tagIds, int pageSize = 40, int page = 1)
         {
             try
             {
@@ -86,7 +86,7 @@ namespace BlazorApp1.Components.Service
             }
         }
 
-        public async Task<List<Game>> GetPopularGamesAsync(int pageSize = 12)
+        public virtual async Task<List<Game>> GetPopularGamesAsync(int pageSize = 12)
         {
             try
             {
