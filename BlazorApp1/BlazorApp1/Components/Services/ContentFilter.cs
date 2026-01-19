@@ -61,10 +61,12 @@ public static class ContentFilter
                 .ToList();
         }
     }
-
-    private static bool IsEnglish(string input)
+    public static bool IsEnglish(string text)
     {
-        
-        return Regex.IsMatch(input, @"^[a-zA-Z0-9\s\-\.\'\u00C0-\u00FF]+$");
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        // Updated Regex with colon support
+        var regex = new System.Text.RegularExpressions.Regex(@"^[a-zA-Z0-9\s\-\.\'\:\u00C0-\u00FF]+$");
+        return regex.IsMatch(text);
     }
 }
