@@ -2,7 +2,6 @@
 using BlazorApp1.Components.Service;
 using Microsoft.Extensions.Caching.Memory;
 
-
 public class GameRecommendationService
 {
     private readonly RawgApiService _apiService;

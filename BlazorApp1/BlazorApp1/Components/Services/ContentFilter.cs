@@ -8,16 +8,44 @@ public static class ContentFilter
     };
 
     private static readonly HashSet<string> NsfwKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-{
-    "nsfw", "hentai", "erotic", "sexual content", "nudity", "porn", "xxx"
-};
+    {
+        "nsfw", "hentai", "erotic", "sexual content", "nudity", "porn", "xxx"
+    };
+
+    private static readonly HashSet<string> UselessKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "singleplayer",
+        "multiplayer",
+        "co-op",
+        "online co-op",
+        "local co-op",
+        "steam achievements",
+        "steam cloud",
+        "full controller support",
+        "partial controller support",
+        "steam-trading-cards",
+        "in-app purchases",
+        "cross-platform multiplayer",
+        "stats",
+        "captions available",
+        "commentary available",
+        "level editor",
+        "modding",
+        "workshop",
+        "achievements",
+        "steam achievements",
+        "leaderboards",
+        "cloud saves"
+    };
 
     public static List<Game> FilterAndClean(List<Game> games)
     {
         if (games == null) return new List<Game>();
 
+        // Filter out NSFW games
         var safeGames = games.Where(g => !IsNsfw(g)).ToList();
 
+        // Clean tags for all safe games
         foreach (var game in safeGames)
         {
             CleanSingleGameTags(game);
@@ -57,16 +85,26 @@ public static class ContentFilter
         if (game?.Tags != null)
         {
             game.Tags = game.Tags
-                .Where(tag => !string.IsNullOrWhiteSpace(tag.Name) && IsEnglish(tag.Name))
+                .Where(tag =>
+                    !string.IsNullOrWhiteSpace(tag.Name) &&
+                    IsEnglish(tag.Name) &&
+                    !IsUselessTag(tag.Name))
                 .ToList();
         }
     }
+
     public static bool IsEnglish(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
 
         // Updated Regex with colon support
-        var regex = new System.Text.RegularExpressions.Regex(@"^[a-zA-Z0-9\s\-\.\'\:\u00C0-\u00FF]+$");
+        var regex = new Regex(@"^[a-zA-Z0-9\s\-\.\'\:\u00C0-\u00FF]+$");
         return regex.IsMatch(text);
+    }
+
+    public static bool IsUselessTag(string tagName)
+    {
+        if (string.IsNullOrWhiteSpace(tagName)) return false;
+        return UselessKeywords.Contains(tagName.Trim(), StringComparer.OrdinalIgnoreCase);
     }
 }

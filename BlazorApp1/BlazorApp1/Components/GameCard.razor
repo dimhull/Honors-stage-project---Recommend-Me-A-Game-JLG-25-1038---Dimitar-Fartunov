@@ -11,22 +11,18 @@
             <div class="no-image">No Image</div>
         }
     </div>
-
     <div class="game-info">
         <h3 class="game-title">@Game.Name</h3>
-
         <div class="game-rating">
             <span class="star">⭐</span>
             <span>@Game.Rating.ToString("F2")</span>
         </div>
-
         @if (Game.Released.HasValue)
         {
             <div class="game-released">
                 Released: @Game.Released.Value.ToString("MMM dd, yyyy")
             </div>
         }
-
         <div class="game-tags">
             @foreach (var tag in Game.Tags.Take(4))
             {
@@ -34,10 +30,11 @@
             }
             @if (Game.Tags.Count > 4)
             {
-                <span class="tag more">+@(Game.Tags.Count - 4) more</span>
+                <span class="tag more clickable" @onclick="ShowAllTags" @onclick:stopPropagation="true">
+                    +@(Game.Tags.Count - 4) more
+                </span>
             }
         </div>
-
         @if (ShowSimilarityScore && SimilarityScore.HasValue)
         {
             <div class="similarity-score">
@@ -46,6 +43,26 @@
         }
     </div>
 </div>
+
+@if (showTagsModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>All Tags for @Game.Name</h3>
+                <button class="close-btn" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="all-tags">
+                    @foreach (var tag in Game.Tags)
+                    {
+                        <span class="tag">@tag.Name</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter]
@@ -60,8 +77,20 @@
     [Parameter]
     public double? SimilarityScore { get; set; }
 
+    private bool showTagsModal = false;
+
     private async Task OnCardClick()
     {
         await OnClick.InvokeAsync(Game);
+    }
+
+    private void ShowAllTags()
+    {
+        showTagsModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showTagsModal = false;
     }
 }
