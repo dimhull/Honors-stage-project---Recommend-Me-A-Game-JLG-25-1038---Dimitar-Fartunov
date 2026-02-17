@@ -1,13 +1,13 @@
 using BlazorApp1.Components;
 using BlazorApp1.Components.Models;
 using BlazorApp1.Components.Service;
-
+using BlazorApp1.Components.Services;
+using BlazorApp1.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-//Memory Cache
-builder.Services.AddMemoryCache();
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -15,13 +15,71 @@ builder.Services.AddRazorComponents()
 builder.Services.Configure<RawgApiSettings>(
     builder.Configuration.GetSection("RawgApi"));
 
-// Register HTTP client and services
+// Add Memory Cache
+builder.Services.AddMemoryCache();
+
+// === DATABASE CONFIGURATION (PRODUCTION) ===
+var mysqlPassword = Environment.GetEnvironmentVariable("PLACEHOLDER");
+
+if (string.IsNullOrEmpty(mysqlPassword))
+{
+    throw new InvalidOperationException(
+        "MYSQL_PASSWORD environment variable is not set. " +
+        "Please set it using: setx MYSQL_PASSWORD \"your_password\" and restart the application.");
+}
+
+var connectionString = $"server=localhost;port=3306;database=gamerecdb;user=root;password={mysqlPassword};SslMode=none;";
+
+// Add MySQL Database (update to 9.6 to match your server)
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(9, 6, 0))));
+
+// Register services
 builder.Services.AddHttpClient<RawgApiService>();
 builder.Services.AddScoped<GameRecommendationService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<WishlistService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Verify database connection on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    try
+    {
+        Console.WriteLine("\n=== DATABASE CONNECTION TEST ===");
+
+        var canConnect = db.Database.CanConnect();
+
+        if (canConnect)
+        {
+            Console.WriteLine("✅ DATABASE CONNECTION SUCCESSFUL!");
+            Console.WriteLine($"Connected to database: {db.Database.GetDbConnection().Database}");
+        }
+        else
+        {
+            Console.WriteLine("❌ DATABASE CONNECTION FAILED!");
+            throw new Exception("Unable to connect to database");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ DATABASE ERROR: {ex.Message}");
+
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"Details: {ex.InnerException.Message}");
+        }
+
+        throw; // Stop application if database is unavailable
+    }
+
+    Console.WriteLine("================================\n");
+}
+
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

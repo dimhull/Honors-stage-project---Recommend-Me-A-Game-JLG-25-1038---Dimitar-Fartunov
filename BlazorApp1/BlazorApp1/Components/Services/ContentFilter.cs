@@ -9,7 +9,7 @@ public static class ContentFilter
 
     private static readonly HashSet<string> NsfwKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "nsfw", "hentai", "erotic", "sexual content", "nudity", "porn", "xxx"
+        "nsfw", "hentai", "erotic", "nudity", "porn", "xxx"
     };
 
     private static readonly HashSet<string> UselessKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
