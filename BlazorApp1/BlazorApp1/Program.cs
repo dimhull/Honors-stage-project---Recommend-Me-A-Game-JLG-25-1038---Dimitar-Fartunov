@@ -18,7 +18,6 @@ builder.Services.Configure<RawgApiSettings>(
 // Add Memory Cache
 builder.Services.AddMemoryCache();
 
-// === DATABASE CONFIGURATION (PRODUCTION) ===
 var mysqlPassword = Environment.GetEnvironmentVariable("PLACEHOLDER");
 
 if (string.IsNullOrEmpty(mysqlPassword))
@@ -30,8 +29,8 @@ if (string.IsNullOrEmpty(mysqlPassword))
 
 var connectionString = $"server=localhost;port=3306;database=gamerecdb;user=root;password={mysqlPassword};SslMode=none;";
 
-// Add MySQL Database (update to 9.6 to match your server)
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Add MySQL Database
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(9, 6, 0))));
 
 // Register services
@@ -42,10 +41,12 @@ builder.Services.AddScoped<WishlistService>();
 
 var app = builder.Build();
 
-// Verify database connection on startup
+/// Verify database connection on startup
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // Use the factory to create a context
+    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+    using var db = dbFactory.CreateDbContext();
 
     try
     {
@@ -73,7 +74,7 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"Details: {ex.InnerException.Message}");
         }
 
-        throw; // Stop application if database is unavailable
+        throw;
     }
 
     Console.WriteLine("================================\n");

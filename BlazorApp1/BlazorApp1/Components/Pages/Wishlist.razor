@@ -1,0 +1,131 @@
+﻿@page "/wishlist"
+@rendermode InteractiveServer
+@using BlazorApp1.Components.Models
+@using BlazorApp1.Components.Services
+@inject WishlistService WishlistService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>My Wishlist</PageTitle>
+
+<div class="home-container">
+    <header class="hero">
+        <h1>My Wishlist</h1>
+        <p>Your favorite games in one place</p>
+    </header>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="auth-prompt">
+            <h3>Please login to view your wishlist</h3>
+            <a href="/login" class="btn-primary">Login</a>
+        </div>
+    }
+    else if (isLoading)
+    {
+        <div class="loading">
+            <div class="spinner">🔄</div>
+            <p>Loading your wishlist...</p>
+        </div>
+    }
+    else if (!wishlistItems.Any())
+    {
+        <div class="empty-wishlist">
+            <h3>Your wishlist is empty</h3>
+            <p>Start adding games you love!</p>
+            <a href="/" class="btn-primary">Browse Games</a>
+        </div>
+    }
+    else
+    {
+        <section class="wishlist-section">
+            <div class="wishlist-header">
+                <h2>@wishlistItems.Count Games</h2>
+                <button @onclick="ClearWishlist" class="btn-danger">Clear All</button>
+            </div>
+
+            <div class="wishlist-grid">
+                @foreach (var item in wishlistItems)
+                {
+                    <div class="wishlist-card">
+                        <div class="wishlist-image">
+                            <img src="@item.GameImage" alt="@item.GameName" />
+                            <button class="remove-btn" @onclick="() => RemoveGame(item.GameId)">
+                                ✕
+                            </button>
+                        </div>
+                        <div class="wishlist-info">
+                            <h3>@item.GameName</h3>
+                            <div class="wishlist-rating">
+                                ⭐ @item.GameRating.ToString("F2")
+                            </div>
+                            @if (item.GameReleased.HasValue)
+                            {
+                                <div class="wishlist-released">
+                                    @item.GameReleased.Value.ToString("MMM dd, yyyy")
+                                </div>
+                            }
+                            <div class="wishlist-added">
+                                Added: @item.AddedAt.ToString("MMM dd, yyyy")
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private List<WishlistItem> wishlistItems = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            isLoading = false;
+            return;
+        }
+
+        await LoadWishlist();
+        WishlistService.OnWishlistChanged += HandleWishlistChanged;
+    }
+
+    private async Task LoadWishlist()
+    {
+        isLoading = true;
+        wishlistItems = await WishlistService.GetUserWishlistAsync();
+        isLoading = false;
+    }
+
+    private async Task RemoveGame(int gameId)
+    {
+        await WishlistService.RemoveFromWishlistAsync(gameId);
+        await LoadWishlist();
+    }
+
+    private async Task ClearWishlist()
+    {
+        if (wishlistItems.Any())
+        {
+            foreach (var item in wishlistItems.ToList())
+            {
+                await WishlistService.RemoveFromWishlistAsync(item.GameId);
+            }
+            await LoadWishlist();
+        }
+    }
+
+    private async void HandleWishlistChanged()
+    {
+        await LoadWishlist();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        WishlistService.OnWishlistChanged -= HandleWishlistChanged;
+    }
+}

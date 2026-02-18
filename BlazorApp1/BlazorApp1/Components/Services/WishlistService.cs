@@ -6,14 +6,14 @@ namespace BlazorApp1.Components.Services
 {
     public class WishlistService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
         private readonly AuthService _authService;
 
         public event Action? OnWishlistChanged;
 
-        public WishlistService(ApplicationDbContext context, AuthService authService)
+        public WishlistService(IDbContextFactory<ApplicationDbContext> contextFactory, AuthService authService)
         {
-            _context = context;
+            _contextFactory = contextFactory;
             _authService = authService;
         }
 
@@ -24,7 +24,9 @@ namespace BlazorApp1.Components.Services
 
             try
             {
-                var existingItem = await _context.WishlistItems
+                using var context = _contextFactory.CreateDbContext();
+
+                var existingItem = await context.WishlistItems
                     .FirstOrDefaultAsync(w => w.UserId == _authService.CurrentUser.Id && w.GameId == game.Id);
 
                 if (existingItem != null)
@@ -44,8 +46,8 @@ namespace BlazorApp1.Components.Services
                     AddedAt = DateTime.UtcNow
                 };
 
-                _context.WishlistItems.Add(wishlistItem);
-                await _context.SaveChangesAsync();
+                context.WishlistItems.Add(wishlistItem);
+                await context.SaveChangesAsync();
 
                 OnWishlistChanged?.Invoke();
                 return true;
@@ -64,14 +66,16 @@ namespace BlazorApp1.Components.Services
 
             try
             {
-                var item = await _context.WishlistItems
+                using var context = _contextFactory.CreateDbContext();
+
+                var item = await context.WishlistItems
                     .FirstOrDefaultAsync(w => w.UserId == _authService.CurrentUser.Id && w.GameId == gameId);
 
                 if (item == null)
                     return false;
 
-                _context.WishlistItems.Remove(item);
-                await _context.SaveChangesAsync();
+                context.WishlistItems.Remove(item);
+                await context.SaveChangesAsync();
 
                 OnWishlistChanged?.Invoke();
                 return true;
@@ -88,8 +92,18 @@ namespace BlazorApp1.Components.Services
             if (_authService.CurrentUser == null)
                 return false;
 
-            return await _context.WishlistItems
-                .AnyAsync(w => w.UserId == _authService.CurrentUser.Id && w.GameId == gameId);
+            try
+            {
+                using var context = _contextFactory.CreateDbContext();
+
+                return await context.WishlistItems
+                    .AnyAsync(w => w.UserId == _authService.CurrentUser.Id && w.GameId == gameId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking wishlist: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<List<WishlistItem>> GetUserWishlistAsync()
@@ -97,10 +111,20 @@ namespace BlazorApp1.Components.Services
             if (_authService.CurrentUser == null)
                 return new List<WishlistItem>();
 
-            return await _context.WishlistItems
-                .Where(w => w.UserId == _authService.CurrentUser.Id)
-                .OrderByDescending(w => w.AddedAt)
-                .ToListAsync();
+            try
+            {
+                using var context = _contextFactory.CreateDbContext();
+
+                return await context.WishlistItems
+                    .Where(w => w.UserId == _authService.CurrentUser.Id)
+                    .OrderByDescending(w => w.AddedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting wishlist: {ex.Message}");
+                return new List<WishlistItem>();
+            }
         }
     }
 }

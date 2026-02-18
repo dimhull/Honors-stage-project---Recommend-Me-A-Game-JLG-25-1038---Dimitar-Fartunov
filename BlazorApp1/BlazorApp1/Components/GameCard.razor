@@ -1,4 +1,9 @@
 ﻿@using BlazorApp1.Components.Models
+@using BlazorApp1.Components.Services
+@inject WishlistService WishlistService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="game-card" @onclick="OnCardClick">
     <div class="game-image">
@@ -10,7 +15,17 @@
         {
             <div class="no-image">No Image</div>
         }
+
+        @if (AuthService.IsAuthenticated)
+        {
+            <button class="wishlist-btn @(isInWishlist ? "active" : "")"
+                    @onclick="ToggleWishlist"
+                    @onclick:stopPropagation="true">
+                @(isInWishlist ? "❤️" : "🤍")
+            </button>
+        }
     </div>
+
     <div class="game-info">
         <h3 class="game-title">@Game.Name</h3>
         <div class="game-rating">
@@ -78,6 +93,17 @@
     public double? SimilarityScore { get; set; }
 
     private bool showTagsModal = false;
+    private bool isInWishlist = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            isInWishlist = await WishlistService.IsInWishlistAsync(Game.Id);
+        }
+
+        WishlistService.OnWishlistChanged += HandleWishlistChanged;
+    }
 
     private async Task OnCardClick()
     {
@@ -92,5 +118,39 @@
     private void CloseModal()
     {
         showTagsModal = false;
+    }
+
+    private async Task ToggleWishlist()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        if (isInWishlist)
+        {
+            await WishlistService.RemoveFromWishlistAsync(Game.Id);
+        }
+        else
+        {
+            await WishlistService.AddToWishlistAsync(Game);
+        }
+
+        isInWishlist = !isInWishlist;
+    }
+
+    private async void HandleWishlistChanged()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            isInWishlist = await WishlistService.IsInWishlistAsync(Game.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        WishlistService.OnWishlistChanged -= HandleWishlistChanged;
     }
 }

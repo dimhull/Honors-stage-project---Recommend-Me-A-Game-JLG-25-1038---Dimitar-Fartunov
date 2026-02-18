@@ -7,14 +7,14 @@ namespace BlazorApp1.Components.Services
 {
     public class AuthService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
         private User? _currentUser;
 
         public event Action? OnAuthStateChanged;
 
-        public AuthService(ApplicationDbContext context)
+        public AuthService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public User? CurrentUser => _currentUser;
@@ -22,7 +22,6 @@ namespace BlazorApp1.Components.Services
 
         public async Task<(bool Success, string Message)> RegisterAsync(string email, string username, string password)
         {
-            // Validation
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
                 return (false, "All fields are required");
@@ -33,7 +32,9 @@ namespace BlazorApp1.Components.Services
                 return (false, "Password must be at least 6 characters");
             }
 
-            var existingUser = await _context.Users
+            using var context = _contextFactory.CreateDbContext();
+
+            var existingUser = await context.Users
                 .FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
             if (existingUser != null)
@@ -51,10 +52,9 @@ namespace BlazorApp1.Components.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
 
-            // Auto-login after registration
             _currentUser = user;
             OnAuthStateChanged?.Invoke();
 
@@ -63,7 +63,9 @@ namespace BlazorApp1.Components.Services
 
         public async Task<(bool Success, string Message)> LoginAsync(string emailOrUsername, string password)
         {
-            var user = await _context.Users
+            using var context = _contextFactory.CreateDbContext();
+
+            var user = await context.Users
                 .FirstOrDefaultAsync(u => u.Email == emailOrUsername || u.Username == emailOrUsername);
 
             if (user == null)
@@ -71,7 +73,6 @@ namespace BlazorApp1.Components.Services
                 return (false, "Invalid credentials");
             }
 
-            // Verify password
             if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             {
                 return (false, "Invalid credentials");
