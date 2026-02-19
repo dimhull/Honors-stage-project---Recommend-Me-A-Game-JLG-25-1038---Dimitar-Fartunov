@@ -36,7 +36,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 // Register services
 builder.Services.AddHttpClient<RawgApiService>();
 builder.Services.AddScoped<GameRecommendationService>();
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<AuthService>();
 builder.Services.AddScoped<WishlistService>();
 
 var app = builder.Build();
@@ -56,12 +56,12 @@ using (var scope = app.Services.CreateScope())
 
         if (canConnect)
         {
-            Console.WriteLine("✅ DATABASE CONNECTION SUCCESSFUL!");
+            Console.WriteLine(" DATABASE CONNECTION SUCCESSFUL!");
             Console.WriteLine($"Connected to database: {db.Database.GetDbConnection().Database}");
         }
         else
         {
-            Console.WriteLine("❌ DATABASE CONNECTION FAILED!");
+            Console.WriteLine(" DATABASE CONNECTION FAILED!");
             throw new Exception("Unable to connect to database");
         }
     }

@@ -12,7 +12,7 @@
 
             @if (AuthService.IsAuthenticated)
             {
-                <a href="/wishlist" class="nav-link">❤️ Wishlist</a>
+                <a href="/wishlist" class="nav-link">Wishlist</a>
                 <span class="nav-user">👤 @AuthService.CurrentUser?.Username</span>
                 <button @onclick="HandleLogout" class="nav-btn">Logout</button>
             }
@@ -31,12 +31,12 @@
         AuthService.OnAuthStateChanged += StateHasChanged;
     }
 
-    private void HandleLogout()
+    private async Task HandleLogout()
     {
         AuthService.Logout();
-        Navigation.NavigateTo("/");
+        await Task.Delay(100); 
+        Navigation.NavigateTo("/", forceLoad: true);
     }
-
     public void Dispose()
     {
         AuthService.OnAuthStateChanged -= StateHasChanged;
