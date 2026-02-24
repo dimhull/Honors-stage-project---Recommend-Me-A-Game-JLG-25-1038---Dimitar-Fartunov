@@ -1,4 +1,4 @@
-﻿@page "/login"
+@page "/login"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using BlazorApp1.Components.Models
@@ -10,19 +10,23 @@
 
 <div class="auth-container">
     <div class="auth-card">
-        <h2>🎮 Login to Game Recommender</h2>
+        <div class="auth-logo">◈</div>
+        <h2>Welcome back</h2>
+        <p class="auth-subtitle">Sign in to your account</p>
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <div class="error-message">
-                ⚠️ @errorMessage
+            <div class="auth-alert auth-alert-error">
+                <span class="alert-icon">✕</span>
+                @errorMessage
             </div>
         }
 
         @if (!string.IsNullOrEmpty(successMessage))
         {
-            <div class="success-message">
-                ✓ @successMessage
+            <div class="auth-alert auth-alert-success">
+                <span class="alert-icon">✓</span>
+                @successMessage
             </div>
         }
 
@@ -35,7 +39,7 @@
                            @bind-Value="loginModel.EmailOrUsername"
                            class="form-control"
                            placeholder="Enter email or username" />
-                <ValidationMessage For="@(() => loginModel.EmailOrUsername)" />
+                <ValidationMessage For="@(() => loginModel.EmailOrUsername)" class="validation-message" />
             </div>
 
             <div class="form-group">
@@ -45,23 +49,25 @@
                            @bind-Value="loginModel.Password"
                            class="form-control"
                            placeholder="Enter password" />
-                <ValidationMessage For="@(() => loginModel.Password)" />
+                <ValidationMessage For="@(() => loginModel.Password)" class="validation-message" />
             </div>
 
             <button type="submit" class="btn-primary" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span>Logging in...</span>
+                    <span class="loading-dots">
+                        <span></span><span></span><span></span>
+                    </span>
                 }
                 else
                 {
-                    <span>Login</span>
+                    <span>Sign In</span>
                 }
             </button>
         </EditForm>
 
         <div class="auth-footer">
-            <p>Don't have an account? <a href="/register">Register here</a></p>
+            <p>Don't have an account? <a href="/register">Create one</a></p>
         </div>
     </div>
 </div>
@@ -85,7 +91,7 @@
             if (result.Success)
             {
                 successMessage = result.Message;
-                await Task.Delay(500); // Brief pause to show success message
+                await Task.Delay(500);
                 Navigation.NavigateTo("/");
             }
             else

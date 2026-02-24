@@ -1,4 +1,4 @@
-﻿@page "/register"
+@page "/register"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using BlazorApp1.Components.Models
@@ -10,19 +10,23 @@
 
 <div class="auth-container">
     <div class="auth-card">
-        <h2>🎮 Create Account</h2>
+        <div class="auth-logo">◈</div>
+        <h2>Create account</h2>
+        <p class="auth-subtitle">Join and start tracking your games</p>
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <div class="error-message">
-                ⚠️ @errorMessage
+            <div class="auth-alert auth-alert-error">
+                <span class="alert-icon">✕</span>
+                @errorMessage
             </div>
         }
 
         @if (!string.IsNullOrEmpty(successMessage))
         {
-            <div class="success-message">
-                ✓ @successMessage
+            <div class="auth-alert auth-alert-success">
+                <span class="alert-icon">✓</span>
+                @successMessage
             </div>
         }
 
@@ -35,7 +39,7 @@
                            @bind-Value="registerModel.Email"
                            class="form-control"
                            placeholder="Enter your email" />
-                <ValidationMessage For="@(() => registerModel.Email)" />
+                <ValidationMessage For="@(() => registerModel.Email)" class="validation-message" />
             </div>
 
             <div class="form-group">
@@ -44,7 +48,7 @@
                            @bind-Value="registerModel.Username"
                            class="form-control"
                            placeholder="Choose a username" />
-                <ValidationMessage For="@(() => registerModel.Username)" />
+                <ValidationMessage For="@(() => registerModel.Username)" class="validation-message" />
             </div>
 
             <div class="form-group">
@@ -54,7 +58,7 @@
                            @bind-Value="registerModel.Password"
                            class="form-control"
                            placeholder="Create a password (min 6 characters)" />
-                <ValidationMessage For="@(() => registerModel.Password)" />
+                <ValidationMessage For="@(() => registerModel.Password)" class="validation-message" />
             </div>
 
             <div class="form-group">
@@ -64,13 +68,15 @@
                            @bind-Value="registerModel.ConfirmPassword"
                            class="form-control"
                            placeholder="Confirm your password" />
-                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="validation-message" />
             </div>
 
             <button type="submit" class="btn-primary" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span>Creating account...</span>
+                    <span class="loading-dots">
+                        <span></span><span></span><span></span>
+                    </span>
                 }
                 else
                 {
@@ -80,7 +86,7 @@
         </EditForm>
 
         <div class="auth-footer">
-            <p>Already have an account? <a href="/login">Login here</a></p>
+            <p>Already have an account? <a href="/login">Sign in</a></p>
         </div>
     </div>
 </div>
