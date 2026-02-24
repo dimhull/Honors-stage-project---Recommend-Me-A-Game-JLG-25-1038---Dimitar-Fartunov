@@ -60,35 +60,24 @@ public class GameRecommendationService
 
     private async Task<List<Game>> FetchLargeCandidatePool(List<int> tagIds)
     {
-        const int TOTAL_PAGES = 25; // 1000 games
+        const int TOTAL_PAGES = 15; // 600 games — RAWG returns by relevance so first pages are highest quality
         const int PAGE_SIZE = 40;
+        const int BATCH_SIZE = 5;
 
         Console.WriteLine($"Fetching {TOTAL_PAGES} pages ({TOTAL_PAGES * PAGE_SIZE} games total)...");
 
         var allCandidates = new List<Game>();
 
-        // Fetch in batches of 5 pages at a time
-        for (int batchStart = 1; batchStart <= TOTAL_PAGES; batchStart += 5)
+        for (int batchStart = 1; batchStart <= TOTAL_PAGES; batchStart += BATCH_SIZE)
         {
-            var batchEnd = Math.Min(batchStart + 4, TOTAL_PAGES);
-            var batchTasks = new List<Task<List<Game>>>();
-
-            for (int page = batchStart; page <= batchEnd; page++)
-            {
-                batchTasks.Add(_apiService.GetGamesByTagsAsync(tagIds, PAGE_SIZE, page));
-            }
+            var batchEnd = Math.Min(batchStart + BATCH_SIZE - 1, TOTAL_PAGES);
+            var batchTasks = Enumerable.Range(batchStart, batchEnd - batchStart + 1)
+                .Select(page => _apiService.GetGamesByTagsAsync(tagIds, PAGE_SIZE, page));
 
             var batchResults = await Task.WhenAll(batchTasks);
-            var batchGames = batchResults.SelectMany(g => g).ToList();
+            allCandidates.AddRange(batchResults.SelectMany(g => g));
 
-            allCandidates.AddRange(batchGames);
-
-            Console.WriteLine($"  Fetched pages {batchStart}-{batchEnd}: {batchGames.Count} games (Total: {allCandidates.Count})");
-
-            if (batchEnd < TOTAL_PAGES)
-            {
-                await Task.Delay(200);
-            }
+            Console.WriteLine($"  Fetched pages {batchStart}-{batchEnd} (Total: {allCandidates.Count})");
         }
 
         var uniqueCandidates = allCandidates.DistinctBy(g => g.Id).ToList();
@@ -100,15 +89,14 @@ public class GameRecommendationService
     public List<GameRecommendation> ProcessRecommendations(Game source, List<Game> candidates, int max, int minMatchingTags)
     {
         var recs = new List<GameRecommendation>();
+        var sourceTagIdSet = new HashSet<int>(source.Tags.Select(t => t.Id));
 
         foreach (var cand in candidates)
         {
             if (cand.Id == source.Id) continue;
             if (cand.Tags == null || !cand.Tags.Any()) continue;
 
-            var matchingTags = cand.Tags
-                .Where(t => source.Tags.Any(st => st.Id == t.Id))
-                .ToList();
+            var matchingTags = cand.Tags.Where(t => sourceTagIdSet.Contains(t.Id)).ToList();
 
             if (matchingTags.Count < minMatchingTags) continue;
 
@@ -117,7 +105,8 @@ public class GameRecommendationService
             int union = source.Tags.Count + cand.Tags.Count - intersection;
             double jaccardScore = (double)intersection / union;
             double similarity = (overlapScore * 0.6) + (jaccardScore * 0.4);
-            double ratingBoost = 1 + ((cand.Rating - 3.0) / 50.0);
+            // Boost range: rating 0→0.70×, rating 3→1.00×, rating 5→1.20×
+            double ratingBoost = 1.0 + ((cand.Rating - 3.0) / 10.0);
             double finalScore = similarity * ratingBoost;
 
             recs.Add(new GameRecommendation
