@@ -83,14 +83,34 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!AuthService.IsAuthenticated)
+        AuthService.OnAuthStateChanged += HandleAuthChanged;
+
+        if (AuthService.IsAuthenticated)
+        {
+            WishlistService.OnWishlistChanged += HandleWishlistChanged;
+            await LoadWishlist();
+        }
+        else
         {
             isLoading = false;
-            return;
         }
+    }
 
-        await LoadWishlist();
-        WishlistService.OnWishlistChanged += HandleWishlistChanged;
+    private async void HandleAuthChanged()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            WishlistService.OnWishlistChanged -= HandleWishlistChanged;
+            WishlistService.OnWishlistChanged += HandleWishlistChanged;
+            await LoadWishlist();
+        }
+        else
+        {
+            WishlistService.OnWishlistChanged -= HandleWishlistChanged;
+            wishlistItems.Clear();
+            isLoading = false;
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadWishlist()
@@ -126,6 +146,7 @@
 
     public void Dispose()
     {
+        AuthService.OnAuthStateChanged -= HandleAuthChanged;
         WishlistService.OnWishlistChanged -= HandleWishlistChanged;
     }
 }

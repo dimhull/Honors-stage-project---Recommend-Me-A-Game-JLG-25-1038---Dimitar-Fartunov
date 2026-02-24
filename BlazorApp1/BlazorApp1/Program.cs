@@ -36,7 +36,8 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 // Register services
 builder.Services.AddHttpClient<RawgApiService>();
 builder.Services.AddScoped<GameRecommendationService>();
-builder.Services.AddSingleton<AuthService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage>();
 builder.Services.AddScoped<WishlistService>();
 
 var app = builder.Build();

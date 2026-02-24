@@ -26,19 +26,35 @@
 </nav>
 
 @code {
-    protected override void OnInitialized()
+    private bool _initialized = false;
+    private Action? _authChangedHandler;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        AuthService.OnAuthStateChanged += StateHasChanged;
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+
+            await AuthService.InitializeAsync();
+
+            _authChangedHandler = async () => await InvokeAsync(StateHasChanged);
+            AuthService.OnAuthStateChanged += _authChangedHandler;
+
+            StateHasChanged();
+        }
     }
 
     private async Task HandleLogout()
     {
-        AuthService.Logout();
-        await Task.Delay(100); 
-        Navigation.NavigateTo("/", forceLoad: true);
+        await AuthService.Logout();
+        Navigation.NavigateTo("/");
     }
+
     public void Dispose()
     {
-        AuthService.OnAuthStateChanged -= StateHasChanged;
+        if (_authChangedHandler is not null)
+        {
+            AuthService.OnAuthStateChanged -= _authChangedHandler;
+        }
     }
 }

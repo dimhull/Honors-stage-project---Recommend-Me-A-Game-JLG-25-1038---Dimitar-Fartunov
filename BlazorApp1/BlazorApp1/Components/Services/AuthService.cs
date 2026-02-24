@@ -2,6 +2,7 @@
 using BlazorApp1.Data;
 using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 namespace BlazorApp1.Components.Services
 {
@@ -9,12 +10,18 @@ namespace BlazorApp1.Components.Services
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
         private User? _currentUser;
+        private bool _initialized = false;
 
         public event Action? OnAuthStateChanged;
 
-        public AuthService(IDbContextFactory<ApplicationDbContext> contextFactory)
+        private readonly ProtectedSessionStorage _sessionStorage;
+
+        public AuthService(
+            IDbContextFactory<ApplicationDbContext> contextFactory,
+            ProtectedSessionStorage sessionStorage)
         {
             _contextFactory = contextFactory;
+            _sessionStorage = sessionStorage;
         }
 
         public User? CurrentUser => _currentUser;
@@ -56,6 +63,7 @@ namespace BlazorApp1.Components.Services
             await context.SaveChangesAsync();
 
             _currentUser = user;
+            await _sessionStorage.SetAsync("userId", user.Id);
             OnAuthStateChanged?.Invoke();
 
             return (true, "Registration successful!");
@@ -79,15 +87,41 @@ namespace BlazorApp1.Components.Services
             }
 
             _currentUser = user;
+            await _sessionStorage.SetAsync("userId", user.Id);
             OnAuthStateChanged?.Invoke();
 
             return (true, "Login successful!");
         }
 
-        public void Logout()
+        public async Task Logout()
         {
             _currentUser = null;
+            await _sessionStorage.DeleteAsync("userId");
             OnAuthStateChanged?.Invoke();
+        }
+
+        public async Task InitializeAsync()
+        {
+            if (_initialized) return;
+            _initialized = true;
+
+            try
+            {
+                var result = await _sessionStorage.GetAsync<int>("userId");
+
+                if (result.Success && result.Value > 0)
+                {
+                    using var context = _contextFactory.CreateDbContext();
+                    _currentUser = await context.Users.FindAsync(result.Value);
+
+                    if (_currentUser != null)
+                        OnAuthStateChanged?.Invoke();
+                }
+            }
+            catch
+            {
+                // Session storage unavailable
+            }
         }
     }
 }
