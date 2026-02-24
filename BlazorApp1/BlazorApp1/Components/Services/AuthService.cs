@@ -14,11 +14,11 @@ namespace BlazorApp1.Components.Services
 
         public event Action? OnAuthStateChanged;
 
-        private readonly ProtectedSessionStorage _sessionStorage;
+        private readonly ProtectedLocalStorage _sessionStorage;
 
         public AuthService(
             IDbContextFactory<ApplicationDbContext> contextFactory,
-            ProtectedSessionStorage sessionStorage)
+            ProtectedLocalStorage sessionStorage)
         {
             _contextFactory = contextFactory;
             _sessionStorage = sessionStorage;

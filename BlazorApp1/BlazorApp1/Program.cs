@@ -37,7 +37,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 builder.Services.AddHttpClient<RawgApiService>();
 builder.Services.AddScoped<GameRecommendationService>();
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedSessionStorage>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedLocalStorage>();
 builder.Services.AddScoped<WishlistService>();
 
 var app = builder.Build();
