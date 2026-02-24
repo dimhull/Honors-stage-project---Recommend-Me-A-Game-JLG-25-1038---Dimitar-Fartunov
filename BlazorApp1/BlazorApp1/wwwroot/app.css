@@ -592,20 +592,14 @@ a {
         margin: 0 0 24px 0;
     }
 
-.btn-primary {
+/* btn-primary used as an anchor link (e.g. wishlist prompt) */
+a.btn-primary {
     display: inline-block;
+    width: auto;
     padding: 12px 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    min-height: unset;
     text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: transform 0.2s;
 }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-    }
 
 .wishlist-section {
     margin-top: 40px;
