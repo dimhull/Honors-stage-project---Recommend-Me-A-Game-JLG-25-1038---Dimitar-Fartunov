@@ -1,11 +1,14 @@
-﻿@using BlazorApp1.Components.Services
+@using BlazorApp1.Components.Services
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @implements IDisposable
 
 <nav class="navbar">
     <div class="nav-container">
-        <a href="/" class="nav-brand">Game Recommender</a>
+        <a href="/" class="nav-brand">
+            <span class="nav-brand-mark">◈</span>
+            Game Recommender
+        </a>
 
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
@@ -13,12 +16,12 @@
             @if (AuthService.IsAuthenticated)
             {
                 <a href="/wishlist" class="nav-link">Wishlist</a>
-                <span class="nav-user">👤 @AuthService.CurrentUser?.Username</span>
+                <span class="nav-user">@AuthService.CurrentUser?.Username</span>
                 <button @onclick="HandleLogout" class="nav-btn">Logout</button>
             }
             else
             {
-                <a href="/login" class="nav-link">Login</a>
+                <a href="/login" class="nav-link-ghost">Login</a>
                 <a href="/register" class="nav-btn-link">Register</a>
             }
         </div>
@@ -34,12 +37,9 @@
         if (firstRender && !_initialized)
         {
             _initialized = true;
-
             await AuthService.InitializeAsync();
-
             _authChangedHandler = async () => await InvokeAsync(StateHasChanged);
             AuthService.OnAuthStateChanged += _authChangedHandler;
-
             StateHasChanged();
         }
     }
@@ -53,8 +53,6 @@
     public void Dispose()
     {
         if (_authChangedHandler is not null)
-        {
             AuthService.OnAuthStateChanged -= _authChangedHandler;
-        }
     }
 }
