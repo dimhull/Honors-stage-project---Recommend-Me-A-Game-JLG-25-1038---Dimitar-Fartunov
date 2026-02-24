@@ -38,6 +38,19 @@
                 Released: @Game.Released.Value.ToString("MMM dd, yyyy")
             </div>
         }
+        @{
+            var platforms = GetDisplayPlatforms();
+            var steamUrl = GetSteamUrl();
+        }
+        @if (platforms.Any())
+        {
+            <div class="game-platforms">
+                @foreach (var p in platforms)
+                {
+                    <span class="platform-badge">@p</span>
+                }
+            </div>
+        }
         <div class="game-tags">
             @foreach (var tag in Game.Tags.Take(4))
             {
@@ -50,6 +63,13 @@
                 </span>
             }
         </div>
+        @if (steamUrl != null)
+        {
+            <a href="@steamUrl" target="_blank" rel="noopener noreferrer"
+               class="steam-link" @onclick:stopPropagation="true">
+                🛒 Buy on Steam
+            </a>
+        }
         @if (ShowSimilarityScore && SimilarityScore.HasValue)
         {
             <div class="similarity-score">
@@ -108,6 +128,35 @@
     private async Task OnCardClick()
     {
         await OnClick.InvokeAsync(Game);
+    }
+
+    private List<string> GetDisplayPlatforms()
+    {
+        if (Game.Platforms == null || !Game.Platforms.Any()) return new List<string>();
+
+        var result = new HashSet<string>();
+        foreach (var pi in Game.Platforms)
+        {
+            var slug = pi.Platform?.Slug ?? "";
+            if (slug == "pc") result.Add("PC");
+            else if (slug == "macos") result.Add("Mac");
+            else if (slug == "linux") result.Add("Linux");
+            else if (slug.StartsWith("playstation")) result.Add("PlayStation");
+            else if (slug.StartsWith("xbox")) result.Add("Xbox");
+            else if (slug == "nintendo-switch") result.Add("Switch");
+            else if (slug == "ios" || slug == "android") result.Add("Mobile");
+        }
+        return result.OrderBy(p => p).ToList();
+    }
+
+    private string? GetSteamUrl()
+    {
+        if (Game.Stores == null) return null;
+        var steam = Game.Stores.FirstOrDefault(s => s.Store?.Slug == "steam");
+        if (steam == null) return null;
+        return !string.IsNullOrEmpty(steam.Url)
+            ? steam.Url
+            : $"https://store.steampowered.com/search/?term={Uri.EscapeDataString(Game.Name)}";
     }
 
     private void ShowAllTags()

@@ -13,48 +13,63 @@ public class GameRecommendationService
         _cache = cache;
     }
 
-    public async Task<List<GameRecommendation>> GetRecommendationsAsync(Game sourceGame, int maxResults = 12)
+    public async Task<List<GameRecommendation>> GetRecommendationsAsync(
+        Game sourceGame,
+        int maxResults = 12,
+        HashSet<int>? requiredTagIds = null)
     {
         if (sourceGame?.Tags == null || !sourceGame.Tags.Any())
             return new List<GameRecommendation>();
 
-        string cacheKey = $"recs_{sourceGame.Id}";
+        // Level 2 cache: recommendations for this game + this specific tag filter
+        string tagSuffix = (requiredTagIds != null && requiredTagIds.Count > 0)
+            ? "_" + string.Join("_", requiredTagIds.OrderBy(id => id))
+            : "";
+        string recsCacheKey = $"recs_{sourceGame.Id}{tagSuffix}";
 
-        // Check cache
-        if (_cache.TryGetValue(cacheKey, out List<GameRecommendation> cachedRecs))
+        if (_cache.TryGetValue(recsCacheKey, out List<GameRecommendation> cachedRecs))
         {
             Console.WriteLine("✓ Using cached recommendations");
             return cachedRecs;
         }
 
+        // Clean source tags before scoring (idempotent; GetGameByIdAsync already does this)
         ContentFilter.CleanSingleGameTags(sourceGame);
+        if (!sourceGame.Tags.Any())
+            return new List<GameRecommendation>();
 
-        Console.WriteLine($"\n=== FINDING RECOMMENDATIONS FOR: {sourceGame.Name} ===");
-        Console.WriteLine($"Source has {sourceGame.Tags.Count} English tags: {string.Join(", ", sourceGame.Tags.Take(5).Select(t => t.Name))}");
-
-        var sourceTagIds = sourceGame.Tags.Select(t => t.Id).ToList();
-
-        var candidates = await FetchLargeCandidatePool(sourceTagIds);
-
-        // This removes NSFW games AND strips non-English tags from all candidates
-        var safeCandidates = ContentFilter.FilterAndClean(candidates);
-
-        var filteredCount = candidates.Count - safeCandidates.Count;
-        if (filteredCount > 0)
+        // Level 1 cache: candidate pool — the expensive 15-page API fetch
+        // Reused across all tag filter combinations for the same source game
+        string candidatesCacheKey = $"candidates_{sourceGame.Id}";
+        if (!_cache.TryGetValue(candidatesCacheKey, out List<Game> safeCandidates))
         {
-            Console.WriteLine($"🔒 Filtered out {filteredCount} NSFW games");
+            Console.WriteLine($"\n=== FETCHING CANDIDATES FOR: {sourceGame.Name} ===");
+            Console.WriteLine($"Source has {sourceGame.Tags.Count} tags: {string.Join(", ", sourceGame.Tags.Take(5).Select(t => t.Name))}");
+
+            var sourceTagIds = sourceGame.Tags.Select(t => t.Id).ToList();
+            var candidates = await FetchLargeCandidatePool(sourceTagIds);
+            safeCandidates = ContentFilter.FilterAndClean(candidates);
+
+            var filteredCount = candidates.Count - safeCandidates.Count;
+            if (filteredCount > 0)
+                Console.WriteLine($"Filtered out {filteredCount} NSFW games");
+
+            _cache.Set(candidatesCacheKey, safeCandidates, TimeSpan.FromHours(240));
+            Console.WriteLine($"→ Cached {safeCandidates.Count} safe candidates");
+        }
+        else
+        {
+            Console.WriteLine("✓ Using cached candidate pool");
         }
 
-        Console.WriteLine($"→ Processing {safeCandidates.Count} candidate games...");
+        Console.WriteLine($"→ Scoring {safeCandidates.Count} candidates" +
+            (requiredTagIds?.Count > 0 ? $" (required tags: {requiredTagIds.Count})" : "") + "...");
 
-        // 3. Process with STRICT rules (4+ matching tags)
-        var recommendations = ProcessRecommendations(sourceGame, safeCandidates, maxResults, minMatchingTags: 4);
+        var recommendations = ProcessRecommendations(sourceGame, safeCandidates, maxResults, minMatchingTags: 4, requiredTagIds);
 
-        Console.WriteLine($"✓ Found {recommendations.Count} high-quality recommendations\n");
+        Console.WriteLine($"✓ Found {recommendations.Count} recommendations\n");
 
-        // Cache for 240 hours
-        _cache.Set(cacheKey, recommendations, TimeSpan.FromHours(240));
-
+        _cache.Set(recsCacheKey, recommendations, TimeSpan.FromHours(240));
         return recommendations;
     }
 
@@ -86,7 +101,7 @@ public class GameRecommendationService
         return uniqueCandidates;
     }
 
-    public List<GameRecommendation> ProcessRecommendations(Game source, List<Game> candidates, int max, int minMatchingTags)
+    public List<GameRecommendation> ProcessRecommendations(Game source, List<Game> candidates, int max, int minMatchingTags, HashSet<int>? requiredTagIds = null)
     {
         var recs = new List<GameRecommendation>();
         var sourceTagIdSet = new HashSet<int>(source.Tags.Select(t => t.Id));
@@ -95,6 +110,14 @@ public class GameRecommendationService
         {
             if (cand.Id == source.Id) continue;
             if (cand.Tags == null || !cand.Tags.Any()) continue;
+
+            // Candidate must contain every pinned tag
+            if (requiredTagIds != null && requiredTagIds.Count > 0)
+            {
+                var candTagIdSet = new HashSet<int>(cand.Tags.Select(t => t.Id));
+                if (!requiredTagIds.All(id => candTagIdSet.Contains(id)))
+                    continue;
+            }
 
             var matchingTags = cand.Tags.Where(t => sourceTagIdSet.Contains(t.Id)).ToList();
 

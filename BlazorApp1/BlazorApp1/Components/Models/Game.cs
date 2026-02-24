@@ -19,6 +19,10 @@ namespace BlazorApp1.Components.Models
 
         [JsonPropertyName("platforms")]
         public List<PlatformInfo> Platforms { get; set; } = new();
+
+        [JsonPropertyName("stores")]
+        public List<StoreInfo> Stores { get; set; } = new();
+
         public int AddedCount { get; set; }
     }
 }

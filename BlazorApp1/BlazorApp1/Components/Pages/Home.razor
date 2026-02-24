@@ -20,17 +20,37 @@
 
     @if (selectedGame != null)
     {
+        <section class="selected-game-section">
+            <div class="selected-game-header">
+                <h2>Selected Game</h2>
+                <button @onclick="GoBackHome" class="back-btn">← Back to Home</button>
+            </div>
+            <div class="selected-game">
+                <GameCard Game="selectedGame" />
+            </div>
 
-            @if (selectedGame != null)
+            @if (selectedGame.Tags.Any())
             {
-                <section class="selected-game-section">
-                    <h2>Selected Game</h2>
-                    <button @onclick="GoBackHome">← Back to Home</button>
-                    <div class="selected-game">
-                        <GameCard Game="selectedGame" />
+                <div class="tag-filter-section">
+                    <div class="tag-filter-header">
+                        <h3>Narrow recommendations by tag</h3>
+                        @if (requiredTagIds.Any())
+                        {
+                            <button class="clear-filter-btn" @onclick="ClearTagFilter">Clear filters</button>
+                        }
                     </div>
-                </section>
+                    <div class="tag-filter-chips">
+                        @foreach (var tag in selectedGame.Tags)
+                        {
+                            <span class="filter-chip @(requiredTagIds.Contains(tag.Id) ? "active" : "")"
+                                  @onclick="() => ToggleRequiredTag(tag)">
+                                @tag.Name
+                            </span>
+                        }
+                    </div>
+                </div>
             }
+        </section>
     }
 
     @if (isLoadingRecommendations)
@@ -41,10 +61,17 @@
         </div>
     }
 
+    @if (!isLoadingRecommendations && selectedGame != null && !recommendations.Any() && requiredTagIds.Any())
+    {
+        <div class="no-filter-results">
+            <p>No games match all selected tags. Try removing some filters.</p>
+        </div>
+    }
+
     @if (recommendations.Any())
     {
         <section class="recommendations-section">
-            <h2>Recommended Games</h2>
+            <h2>Recommended Games@(requiredTagIds.Any() ? $" (filtered by {requiredTagIds.Count} tag{(requiredTagIds.Count > 1 ? "s" : "")})" : "")</h2>
             <div class="games-grid">
                 @foreach (var rec in recommendations)
                 {
@@ -78,6 +105,7 @@
     private List<GameRecommendation> recommendations = new();
     private List<Game> popularGames = new();
     private bool isLoadingRecommendations = false;
+    private HashSet<int> requiredTagIds = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -90,12 +118,40 @@
     {
         selectedGame = null;
         recommendations.Clear();
+        requiredTagIds.Clear();
+    }
+
+    private async Task ToggleRequiredTag(Tag tag)
+    {
+        if (requiredTagIds.Contains(tag.Id))
+            requiredTagIds.Remove(tag.Id);
+        else
+            requiredTagIds.Add(tag.Id);
+
+        await RefreshRecommendations();
+    }
+
+    private async Task ClearTagFilter()
+    {
+        requiredTagIds.Clear();
+        await RefreshRecommendations();
+    }
+
+    private async Task RefreshRecommendations()
+    {
+        if (selectedGame == null) return;
+        isLoadingRecommendations = true;
+        StateHasChanged();
+        var filter = requiredTagIds.Count > 0 ? new HashSet<int>(requiredTagIds) : null;
+        recommendations = await RecommendationService.GetRecommendationsAsync(selectedGame, 12, filter);
+        isLoadingRecommendations = false;
     }
 
     private async Task HandleGameSelected(Game game)
     {
         selectedGame = game;
         recommendations.Clear();
+        requiredTagIds.Clear();
         isLoadingRecommendations = true;
 
         try
@@ -106,7 +162,6 @@
             {
                 Console.WriteLine($"Loaded game: {fullGame.Name}");
                 Console.WriteLine($"Tags count: {fullGame.Tags?.Count ?? 0}");
-                Console.WriteLine($"First 5 tags: {string.Join(", ", fullGame.Tags?.Take(5).Select(t => t.Name) ?? new List<string>())}");
 
                 selectedGame = fullGame;
                 recommendations = await RecommendationService.GetRecommendationsAsync(fullGame, 12);
