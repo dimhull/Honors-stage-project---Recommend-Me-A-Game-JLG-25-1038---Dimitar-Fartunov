@@ -1,0 +1,79 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Run tests on a GitHub-hosted runner (free)
+  # ─────────────────────────────────────────────
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore BlazorApp1/BlazorApp1.sln
+
+      - name: Build
+        run: dotnet build BlazorApp1/BlazorApp1.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test BlazorApp1/BlazorApp1.Tests/BlazorApp1.Tests.csproj --no-build --configuration Release --verbosity normal
+
+  # ─────────────────────────────────────────────
+  # Publish & deploy — only on pushes to main
+  # Runs on a self-hosted runner ON the Hull VM
+  # ─────────────────────────────────────────────
+  deploy:
+    name: Deploy to IIS
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish
+        run: dotnet publish BlazorApp1/BlazorApp1/BlazorApp1.csproj --configuration Release --output ./ci-publish
+
+      - name: Stop app pool
+        shell: powershell
+        run: |
+          & "C:\Windows\System32\inetsrv\appcmd.exe" stop apppool /apppool.name:"DefaultAppPool"
+          Start-Sleep -Seconds 2
+
+      - name: Copy files to wwwroot
+        shell: powershell
+        run: |
+          # Robocopy exit codes 0-7 are success (0=no change, 1=copy OK, etc.)
+          # /XF excludes files you never want overwritten (production secrets)
+          robocopy .\ci-publish C:\inetpub\wwwroot /E /IS /PURGE /NJH /NJS /NFL /NDL `
+            /XF appsettings.Production.json
+          if ($LASTEXITCODE -le 7) { exit 0 }
+          exit $LASTEXITCODE
+
+      - name: Start app pool
+        shell: powershell
+        run: |
+          & "C:\Windows\System32\inetsrv\appcmd.exe" start apppool /apppool.name:"DefaultAppPool"
+
+      - name: Clean up publish folder
+        shell: powershell
+        if: always()
+        run: Remove-Item -Recurse -Force .\ci-publish -ErrorAction SilentlyContinue
