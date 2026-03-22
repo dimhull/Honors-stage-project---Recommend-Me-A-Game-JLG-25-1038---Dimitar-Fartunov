@@ -44,11 +44,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
       - name: Publish
         run: dotnet publish BlazorApp1/BlazorApp1/BlazorApp1.csproj --configuration Release --output ./ci-publish
 
